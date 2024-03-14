@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quiz Application</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Arial', sans-serif;
+            background-color: #f2f2f2;
+        }
+
+        #quiz-container {
+            display: flex;
+            padding-top: 20px;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .question-container {
+            width: 190%;
+        }
+
+        #quiz-container button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+        }
+
+        .options-container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .options-container input {
+            margin-right: 10px;
+        }
+
+        #confirmation-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #confirmation-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        #confirmation-box p {
+            margin-bottom: 15px;
+        }
+
+        #confirmation-buttons {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        #result-modal {
+            display: none;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            text-align: left;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        #result-modal h2 {
+            margin-bottom: 20px;
+        }
+
+        #result-modal p {
+            margin-bottom: 10px;
+        }
+
+        #ok-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+        }
+
+        #cancel-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+            background-color: #f44336;
+        }
+
+        .correct-answer {
+            display: none;
+        }
+
+        #result-modal {
+            display: none;
+            background: #fff;
+            padding: 90px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        #result-modal p {
+            margin-bottom: 10px;
+        }
+          #correct-answers, #wrong-answers , #total-question, #thank-you-msg {
+            color: black; /* Font color */
+            font-weight: bold; /* Font weight */
+            margin-bottom: 10px;
+        }
+
+        #ok-button-result {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: none;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="credentials-container" id="quiz-container">
+        <h1>Welcome to Quiz Application</h1>
+    </div>
+
+    <div id="confirmation-modal">
+        <div id="confirmation-box">
+            <p>Are you sure you want to submit the test?</p>
+            <div id="confirmation-buttons">
+                <button id="ok-button">OK</button>
+                <button id="cancel-button">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="result-modal">
+        <p>Quiz Result</p>
+        <div id="total-question"></div>
+        <div id="correct-answers"></div>
+        <div id="wrong-answers"></div>
+        <div id="note"></div>
+        <div id="thank-you-msg"></div>
+        <button id="ok-button-result">OK</button>
+    </div>
+
+    <script>
+         const API_URL = 'https://opentdb.com/api.php?amount=10&category=18&difficulty=easy&type=multiple';
+        const userAnswers = [];
+
+        fetch(API_URL)
+            .then(response => response.json())
+            .then(data => renderQuiz(data.results))
+            .catch(error => console.error('Error fetching data:', error));
+
+        function renderQuiz(questions) {
+            const quizContainer = document.getElementById('quiz-container');
+
+            questions.forEach((question, index) => {
+                const questionContainer = document.createElement('div');
+                questionContainer.classList.add('question-container');
+                questionContainer.innerHTML = `<h3>${index + 1}. ${question.question}</h3>`;
+
+                const optionsContainer = document.createElement('div');
+                optionsContainer.classList.add('options-container');
+
+                const options = question.incorrect_answers.concat(question.correct_answer);
+                const shuffledOptions = options.sort(() => Math.random() - 0.5);
+
+                shuffledOptions.forEach(option => {
+                    const optionElement = document.createElement('input');
+                    optionElement.type = 'radio';
+                    optionElement.name = `question${index}`;
+                    optionElement.value = option;
+                    optionElement.id = `question${index}_${option}`;
+
+                    const labelElement = document.createElement('label');
+                    labelElement.htmlFor = `question${index}_${option}`;
+                    labelElement.textContent = option;
+
+                    optionElement.addEventListener('change', () => {
+                        userAnswers[index] = option;
+                    });
+
+                    optionsContainer.appendChild(optionElement);
+                    optionsContainer.appendChild(labelElement);
+                });
+
+                questionContainer.appendChild(optionsContainer);
+
+                const correctAnswerElement = document.createElement('div');
+                correctAnswerElement.classList.add('correct-answer');
+                correctAnswerElement.textContent = question.correct_answer;
+                questionContainer.appendChild(correctAnswerElement);
+
+                quizContainer.appendChild(questionContainer);
+            });
+
+            const submitButton = document.createElement('button');
+            submitButton.textContent = 'Submit';
+            submitButton.addEventListener('click', () => showConfirmation());
+            quizContainer.appendChild(submitButton);
+        }
+
+        function showConfirmation() {
+            const confirmationModal = document.getElementById('confirmation-modal');
+            confirmationModal.style.display = 'flex';
+
+            const okButton = document.getElementById('ok-button');
+            const cancelButton = document.getElementById('cancel-button');
+
+            okButton.addEventListener('click', () => {
+                confirmationModal.style.display = 'none';
+                calculateResult();
+            });
+
+            cancelButton.addEventListener('click', () => {
+                confirmationModal.style.display = 'none';
+            });
+        }
+
+        function calculateResult() {
+            let correctAnswers = 0;
+            const questions = document.querySelectorAll('.question-container');
+
+            questions.forEach((question, index) => {
+                const selectedOption = question.querySelector('input[name="question' + index + '"]:checked');
+
+                if (selectedOption) {
+                    userAnswers[index] = selectedOption.value;
+                }
+
+                const correctAnswerElement = question.querySelector('.correct-answer');
+                const correctAnswer = correctAnswerElement.textContent;
+
+                if (userAnswers[index] === correctAnswer) {
+                    correctAnswers++;
+                }
+            });
+
+            const totalQuestions = questions.length;
+            const score = (correctAnswers / totalQuestions) * 100;
+            let feedback = '';
+
+            if (score >= 80) {
+                feedback = 'Very Good!';
+            } else if (score >= 60) {
+                feedback = 'Good';
+            } else {
+                feedback = 'Poor';
+            }
+
+            const resultModal = document.getElementById('result-modal');
+            resultModal.style.display = 'block';
+
+            const resultTitle = resultModal.querySelector('p');
+            const totalquestionText = resultModal.querySelector('#total-question');
+            const correctAnswersText = resultModal.querySelector('#correct-answers');
+            const wrongAnswersText = resultModal.querySelector('#wrong-answers');
+            const userScoreText = resultModal.querySelector('#user-score');
+            const noteText = resultModal.querySelector('#note');
+            const thankYouMsgText = resultModal.querySelector('#thank-you-msg');
+
+            resultTitle.textContent = 'Quiz Result';
+            totalquestionText.textContent = `Total Questions: ${totalQuestions}`;
+            correctAnswersText.textContent = `Correct Answers: ${correctAnswers}`;
+            wrongAnswersText.textContent = `Wrong Answers: ${totalQuestions - correctAnswers}`;
+            noteText.textContent = `Performance Note: ${feedback}`;
+            thankYouMsgText.textContent = 'Thank you for taking the quiz!';
+
+            const okButtonResult = document.getElementById('ok-button-result');
+            okButtonResult.addEventListener('click', () => {
+
+                window.location.href = '{{ url_for("show_login") }}';
+                  window.close();
+            });
+
+        }
+    </script>
+</body>
+</html>
